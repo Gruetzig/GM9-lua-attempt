@@ -43,6 +43,32 @@ static u16* GetScreenFromIndex(int index) {
     }
 }
 
+static int UI_ShowPNG(lua_State* L) {
+    CheckLuaArgCount(L, 2, "ShowPNG");
+    lua_Integer which_screen = luaL_checknumber(L, 1);
+    const char* path = lua_tostring(L, 2);
+    u16* screen = GetScreenFromIndex(which_screen);
+    u16 *bitmap = NULL;
+    u8* png = (u8*) malloc(SCREEN_SIZE_TOP);
+    u32 bitmap_width, bitmap_height;
+    if (png) {
+        u32 png_size = FileGetData(path, png, SCREEN_SIZE_TOP, 0);
+        if (png_size && png_size < SCREEN_SIZE_TOP)
+            bitmap = PNG_Decompress(png, png_size, &bitmap_width, &bitmap_height);
+        free(png);
+    }
+    DrawBitmap(
+        screen,                                 // screen
+        (SCREEN_WIDTH(screen)-bitmap_width)/2,  // x coordinate calculated to be centered
+        (SCREEN_HEIGHT-bitmap_height)/2,        // y coordinate calculated to be centered
+        bitmap_width,                           // width
+        bitmap_height,                          // height
+        bitmap                                  // bitmap
+        );
+    free(bitmap);
+    return 0;
+}
+
 static int UI_ShowPrompt(lua_State* L) {
     CheckLuaArgCount(L, 1, "ShowPrompt");
     const char* text = lua_tostring(L, 1);
@@ -185,6 +211,7 @@ static const luaL_Reg UIlib[] = {
     {"ShowSelectPrompt", UI_ShowSelectPrompt},
     {"ShowProgress", UI_ShowProgress},
     {"DrawString", UI_DrawString},
+    {"DrawPNG", UI_ShowPNG},
     {NULL, NULL}
 };
 
