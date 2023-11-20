@@ -49,23 +49,36 @@ static int UI_ShowPNG(lua_State* L) {
     const char* path = lua_tostring(L, 2);
     u16* screen = GetScreenFromIndex(which_screen);
     u16 *bitmap = NULL;
-    u8* png = (u8*) malloc(SCREEN_SIZE_TOP);
+    u8* png = (u8*) malloc(SCREEN_SIZE(screen));
     u32 bitmap_width, bitmap_height;
     if (png) {
-        u32 png_size = FileGetData(path, png, SCREEN_SIZE_TOP, 0);
-        if (png_size && png_size < SCREEN_SIZE_TOP)
+        u32 png_size = FileGetData(path, png, SCREEN_SIZE(screen), 0);
+        if (!png_size) {
+            free(png);
+            return luaL_error(L, "Could not read %s", path);
+        }
+        if (png_size && png_size < SCREEN_SIZE(screen)) {
             bitmap = PNG_Decompress(png, png_size, &bitmap_width, &bitmap_height);
+            if (!bitmap) {
+                free(png);
+                return luaL_error(L, "Invalid PNG file");
+            }
+        }
         free(png);
+        if (bitmap) {
+            DrawBitmap(
+                screen,                                 // screen
+                (SCREEN_WIDTH(screen)-bitmap_width)/2,  // x coordinate calculated to be centered
+                (SCREEN_HEIGHT-bitmap_height)/2,        // y coordinate calculated to be centered
+                bitmap_width,                           // width
+                bitmap_height,                          // height
+                bitmap                                  // bitmap
+                );
+            free(bitmap);
+        } else {
+            return luaL_error(L, "PNG too large for console screen");
+        }
     }
-    DrawBitmap(
-        screen,                                 // screen
-        (SCREEN_WIDTH(screen)-bitmap_width)/2,  // x coordinate calculated to be centered
-        (SCREEN_HEIGHT-bitmap_height)/2,        // y coordinate calculated to be centered
-        bitmap_width,                           // width
-        bitmap_height,                          // height
-        bitmap                                  // bitmap
-        );
-    free(bitmap);
     return 0;
 }
 
